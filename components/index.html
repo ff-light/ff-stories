@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FF.js Component Testing</title>
+    <!-- Blocking script to restore theme before first paint — prevents flicker -->
+    <script>
+        (function() {
+            var theme = localStorage.getItem('ff-components-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <style>
+        /* Dark theme fallbacks — applied before module script loads full tokens */
+        [data-theme="dark"] {
+            --colorNeutralBackground1: #292929;
+            --colorNeutralForeground1: #ffffff;
+            --colorNeutralBackground2: #1f1f1f;
+            --colorNeutralForeground2: #d6d6d6;
+            --colorNeutralStroke1: #666666;
+            --colorCompoundBrandBackground: #5577dd;
+            --colorNeutralForegroundInverted: #ffffff;
+            --colorNeutralBackground1Hover: #222244;
+            --colorNeutralBackground1Selected: #383838;
+            --colorBrandForeground1: #7799ff;
+            --colorCompoundBrandBackgroundHover: #6688ee;
+            --colorCompoundBrandBackgroundPressed: #4466cc;
+            --colorNeutralForeground3: #8888aa;
+        }
+    </style>
+    <style>
+        /* Basic styles - tokens will be applied dynamically via JavaScript */
+        body { 
+            font-family: var(--fontFamilyBase, 'Segoe UI', sans-serif);
+            margin: 0;
+            padding: 0;
+            background-color: var(--colorNeutralBackground1, #ffffff);
+            color: var(--colorNeutralForeground1, #242424);
+            transition: background-color var(--durationNormal, 0.2s) var(--curveEasyEase, ease),
+                        color var(--durationNormal, 0.2s) var(--curveEasyEase, ease);
+        }
+
+        @font-face { font-family: 'Noto Emoji';
+            src: url('/ff-stories/components/assets/NotoEmoji-xxNREEN5.woff2') format("woff2"),
+                 url('/ff-stories/components/assets/NotoEmoji-Oss1cQhq.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal; 
+        }	         
+
+        /* ===== Floating toggle button (always visible) ===== */
+        #header-toggle-btn {
+            position: fixed;
+            top: 8px;
+            right: 16px;
+            z-index: 998;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--colorCompoundBrandBackground, #0078d4);
+            color: var(--colorNeutralForegroundInverted, #ffffff);
+            border: var(--strokeWidthThin, 1px) solid var(--colorCompoundBrandBackground, #0078d4);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            font-size: 20px;
+            transition: transform var(--durationUltraFast, 0.1s) var(--curveEasyEase, ease),
+                        background-color var(--durationUltraFast, 0.1s) var(--curveDecelerateMid, ease);
+            line-height: 0;                        
+        }
+        #header-toggle-btn:hover {
+            background-color: var(--colorCompoundBrandBackgroundHover, #106ebe);
+            transform: scale(1.08);
+        }
+        #header-toggle-btn:active {
+            background-color: var(--colorCompoundBrandBackgroundPressed, #005a9e);
+            transform: scale(0.95);
+        }
+
+        /* ===== Popover overlay ===== */
+        .header-popover {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 999;
+            background-color: var(--colorNeutralBackground2, #fafafa);
+            border-bottom: var(--strokeWidthThin, 1px) solid var(--colorNeutralStroke1, #d1d1d1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+            padding: 1rem 2rem;
+            animation: slideDown 0.2s var(--curveEasyEase, ease);
+        }
+        .header-popover.open {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+        .header-popover h1 {
+            margin: 0;
+            font-size: var(--fontSizeBase700, 28px);
+            font-weight: var(--fontWeightSemibold, 600);
+            color: var(--colorNeutralForeground1, #242424);
+        }
+        .header-popover .header-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
+        .header-popover .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--colorNeutralForeground2, #424242);
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+        .header-popover .close-btn:hover {
+            color: var(--colorNeutralForeground1, #242424);
+        }
+
+        /* ===== Shared button styles ===== */
+        button {
+            background-color: var(--colorCompoundBrandBackground, #0078d4);
+            color: var(--colorNeutralForegroundInverted, #ffffff);
+            border: var(--strokeWidthThin, 1px) solid var(--colorCompoundBrandBackground, #0078d4);
+            border-radius: var(--borderRadiusMedium, 4px);
+            font-family: var(--fontFamilyBase, 'Segoe UI', sans-serif);
+            font-size: var(--fontSizeBase300, 14px);
+            font-weight: var(--fontWeightSemibold, 600);
+            cursor: pointer;
+            transition: background-color var(--durationUltraFast, 0.1s) var(--curveDecelerateMid, ease);
+            padding: 0.5rem 1rem;
+        }
+        button:hover {
+            background-color: var(--colorCompoundBrandBackgroundHover, #106ebe);
+            border-color: var(--colorCompoundBrandBackgroundHover, #106ebe);
+        }
+        button:active {
+            background-color: var(--colorCompoundBrandBackgroundPressed, #005a9e);
+            border-color: var(--colorCompoundBrandBackgroundPressed, #005a9e);
+        }
+
+        small {
+            color: var(--colorNeutralForeground3, #616161);
+            font-size: var(--fontSizeBase200, 12px);
+            white-space: nowrap;
+        }
+
+        /* ===== Sidebar + content layout ===== */
+        .tabs-container {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+        }
+
+        .tab-list {
+            display: flex;
+            flex-direction: column;
+            width: 180px;
+            min-width: 180px;
+            border-right: var(--strokeWidthThick, 2px) solid var(--colorNeutralStroke1, #d1d1d1);
+            background-color: var(--colorNeutralBackground2, #fafafa);
+            overflow-y: auto;
+            gap: 0;
+            padding: 0.5rem 0;
+        }
+
+        .tabs-container.case-list-hidden .tab-list {
+            display: none;
+        }
+
+        .tab-button {
+            padding: 0.75rem 1.25rem;
+            border: none;
+            background-color: transparent;
+            color: var(--colorNeutralForeground2, #424242);
+            font-size: var(--fontSizeBase300, 14px);
+            font-weight: var(--fontWeightRegular, 400);
+            cursor: pointer;
+            transition: all var(--durationUltraFast, 0.1s) var(--curveEasyEase, ease);
+            border-left: 3px solid transparent;
+            text-align: left;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .tab-button:hover {
+            background-color: var(--colorNeutralBackground1Hover, #f9f9f9);
+            color: var(--colorNeutralForeground1, #242424);
+        }
+
+        .tab-button.active {
+            color: var(--colorBrandForeground1, #0078d4);
+            border-left-color: var(--colorBrandForeground1, #0078d4);
+            background-color: var(--colorNeutralBackground1Selected, #f0f0f0);
+            font-weight: var(--fontWeightSemibold, 600);
+        }
+
+        .tab-panels {
+            flex: 1;
+            overflow: auto;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        .tab-content {
+            padding: var(--8pbu, 8px);
+            background-color: var(--colorNeutralBackground1, #ffffff);
+            box-sizing: border-box;
+            height: 100vh;
+            overflow: auto;
+        }
+
+        @media (max-width: 720px) {
+            .tabs-container {
+                flex-direction: column;
+                height: 100dvh;
+                min-height: 100vh;
+                min-height: 100dvh;
+            }
+
+            .tab-list {
+                box-sizing: border-box;
+                flex: 0 0 52px;
+                flex-direction: row;
+                width: 100%;
+                min-width: 0;
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding: 0 0.25rem;
+                border-right: 0;
+                border-bottom: var(--strokeWidthThick, 2px) solid var(--colorNeutralStroke1, #d1d1d1);
+            }
+
+            .tab-button {
+                flex: 0 0 auto;
+                padding: 0.5rem 0.75rem;
+                border-left: 0;
+                border-bottom: 3px solid transparent;
+                text-align: center;
+                white-space: nowrap;
+            }
+
+            .tab-button.active {
+                border-left-color: transparent;
+                border-bottom-color: var(--colorBrandForeground1, #0078d4);
+            }
+
+            .tab-panels {
+                min-width: 0;
+                min-height: 0;
+            }
+
+            .tab-content {
+                height: auto;
+                min-height: calc(100vh - 52px);
+                min-height: calc(100dvh - 52px);
+                overflow: visible;
+                padding: 8px 12px;
+            }
+
+            .tabs-container.case-list-hidden .tab-content {
+                height: 100vh;
+                height: 100dvh;
+                min-height: 100vh;
+                min-height: 100dvh;
+            }
+        }
+    </style>
+  <script type="module" crossorigin src="/ff-stories/components/assets/index-BhJF8c2J.js"></script>
+</head>
+<body>
+    <!-- Floating button to toggle header popover -->
+    <button id="header-toggle-btn" onclick="toggleHeaderPopover()" title="Show/hide header" aria-label="Toggle header" aria-controls="header-popover" aria-expanded="false">&#9881;</button>
+
+    <!-- Header popover overlay (hidden by default) -->
+    <div id="header-popover" class="header-popover">
+        <h1>FF.js Component Testing</h1>
+        <div class="header-controls">
+            <button onclick="logThemeInfo()" title="Log current theme information">Log Theme Info</button>
+            <button onclick="toggleTheme()" title="Toggle between light and dark theme">Toggle Theme</button>
+            <button id="case-list-toggle-btn" type="button" aria-controls="case-list" aria-expanded="true" onclick="toggleCaseList()">Hide Test Cases</button>
+            <small>Theme: <span id="theme-indicator"></span></small>
+            <button class="close-btn" onclick="toggleHeaderPopover()" title="Close" aria-label="Close settings menu">&times;</button>
+        </div>
+    </div>
+
+    <!-- Component tabs -->
+    <div class="tabs-container">
+        <div class="tab-list" id="case-list">
+            <button class="tab-button" data-tab="dropdown">Dropdown</button>
+            <button class="tab-button" data-tab="list">List</button>
+            <button class="tab-button" data-tab="grid">Grid</button>
+            <button class="tab-button" data-tab="hex-layer">Hex Layer</button>
+            <button class="tab-button active" data-tab="pager" aria-current="page">Pager</button>
+            <button class="tab-button" data-tab="json-view">JSON View</button>
+            <button class="tab-button" data-tab="json-edit">JSON Edit</button>
+            <button class="tab-button" data-tab="virtual-table">Virtual Table</button>
+            <button class="tab-button" data-tab="multi-select-filter">Multi-Select Filter</button>
+            <button class="tab-button" data-tab="combobox">Combobox</button>
+            <button class="tab-button" data-tab="select">Select</button>
+            <button class="tab-button" data-tab="button">Button</button>
+            <button class="tab-button" data-tab="textinput">Text Input</button>
+            <button class="tab-button" data-tab="accordion">Accordion</button>
+            <button class="tab-button" data-tab="docx">Docx</button>
+            <button class="tab-button" data-tab="document">Document</button>
+            <button class="tab-button" data-tab="numberinput">Number Input</button>
+            <button class="tab-button" data-tab="log-workbench">Log Workbench</button>
+            <button class="tab-button" data-tab="nfilter">N-Filter</button>
+        </div>
+
+        <div class="tab-panels">
+            <!-- Dropdown Tests Panel -->
+            <div class="tab-panel" data-panel="dropdown">
+                <div class="tab-content">
+                    <ff-dropdown-tests></ff-dropdown-tests>
+                </div>
+            </div>
+
+            <!-- List Tests Panel -->
+            <div class="tab-panel" data-panel="list">
+                <div class="tab-content">
+                    <ff-list-tests></ff-list-tests>
+                </div>
+            </div>
+
+            <!-- Grid Tests Panel -->
+            <div class="tab-panel" data-panel="grid">
+                <div class="tab-content">
+                    <ff-grid-tests></ff-grid-tests>
+                </div>
+            </div>
+
+            <!-- Hex Layer Tests Panel -->
+            <div class="tab-panel" data-panel="hex-layer">
+                <div class="tab-content">
+                    <ff-hex-layer-tests></ff-hex-layer-tests>
+                </div>
+            </div>
+
+            <!-- Pager Tests Panel -->
+            <div class="tab-panel active" data-panel="pager">
+                <div class="tab-content">
+                    <ff-pager-tests></ff-pager-tests>
+                </div>
+            </div>
+
+            <!-- JSON View Tests Panel -->
+            <div class="tab-panel" data-panel="json-view">
+                <div class="tab-content">
+                    <ff-json-view-tests></ff-json-view-tests>
+                </div>
+            </div>
+
+            <!-- JSON Edit Tests Panel -->
+            <div class="tab-panel" data-panel="json-edit">
+                <div class="tab-content">
+                    <ff-json-edit-tests></ff-json-edit-tests>
+                </div>
+            </div>
+
+            <!-- Virtual Table Tests Panel -->
+            <div class="tab-panel" data-panel="virtual-table">
+                <div class="tab-content">
+                    <ff-virtual-table-tests></ff-virtual-table-tests>
+                </div>
+            </div>
+
+            <!-- Multi-Select Filter Tests Panel -->
+            <div class="tab-panel" data-panel="multi-select-filter">
+                <div class="tab-content">
+                    <ff-multi-select-filter-tests></ff-multi-select-filter-tests>
+                </div>
+            </div>
+
+            <!-- Combobox Tests Panel -->
+            <div class="tab-panel" data-panel="combobox">
+                <div class="tab-content">
+                    <h2>Combobox Component Tests</h2>
+                    <p>Coming soon...</p>
+                </div>
+            </div>
+
+            <!-- Select Tests Panel -->
+            <div class="tab-panel" data-panel="select">
+                <div class="tab-content">
+                    <h2>Select Component Tests</h2>
+                    <p>Coming soon...</p>
+                </div>
+            </div>
+
+            <!-- Button Tests Panel -->
+            <div class="tab-panel" data-panel="button">
+                <div class="tab-content">
+                    <h2>Button Component Tests</h2>
+                    <p>Coming soon...</p>
+                </div>
+            </div>
+
+            <!-- Text Input Tests Panel -->
+            <div class="tab-panel" data-panel="textinput">
+                <div class="tab-content">
+                    <h2>Text Input Component Tests</h2>
+                    <p>Coming soon...</p>
+                </div>
+            </div>
+
+            <!-- Accordion Tests Panel -->
+            <div class="tab-panel" data-panel="accordion">
+                <div class="tab-content">
+                    <h2>Accordion Component Tests</h2>
+                    <p>Coming soon...</p>
+                </div>
+            </div>
+
+            <!-- Docx Tests Panel -->
+            <div class="tab-panel" data-panel="docx">
+                <div class="tab-content">
+                    <ff-docx-tests></ff-docx-tests>
+                </div>
+            </div>
+
+            <!-- Document Tests Panel -->
+            <div class="tab-panel" data-panel="document">
+                <div class="tab-content">
+                    <ff-document-tests></ff-document-tests>
+                </div>
+            </div>
+
+            <!-- Number Input Tests Panel -->
+            <div class="tab-panel" data-panel="numberinput">
+                <div class="tab-content">
+                    <ff-number-input-tests></ff-number-input-tests>
+                </div>
+            </div>
+
+            <!-- Log Workbench Tests Panel -->
+            <div class="tab-panel" data-panel="log-workbench">
+                <div class="tab-content">
+                    <ff-log-workbench-tests></ff-log-workbench-tests>
+                </div>
+            </div>
+
+            <!-- N-Filter Tests Panel -->
+            <div class="tab-panel" data-panel="nfilter">
+                <div class="tab-content">
+                    <ff-n-filter-tests></ff-n-filter-tests>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab switching functionality with hash routing - runs before module script -->
+    <script>
+        const TAB_CONFIG = {
+            defaultTab: 'pager',
+            storageKey: 'ff-components-active-tab'
+        };
+
+        // ===== Header popover toggle =====
+        function toggleHeaderPopover() {
+            const popover = document.getElementById('header-popover');
+            const isOpen = popover.classList.toggle('open');
+            document.getElementById('header-toggle-btn').setAttribute('aria-expanded', String(isOpen));
+        }
+
+        function toggleCaseList() {
+            const tabsContainer = document.querySelector('.tabs-container');
+            const button = document.getElementById('case-list-toggle-btn');
+            const isHidden = tabsContainer.classList.toggle('case-list-hidden');
+
+            button.setAttribute('aria-expanded', String(!isHidden));
+            button.textContent = isHidden ? 'Show Test Cases' : 'Hide Test Cases';
+        }
+
+        // Close popover when clicking outside it
+        document.addEventListener('click', (e) => {
+            const popover = document.getElementById('header-popover');
+            const toggleBtn = document.getElementById('header-toggle-btn');
+            if (popover.classList.contains('open') &&
+                !popover.contains(e.target) &&
+                !toggleBtn.contains(e.target)) {
+                popover.classList.remove('open');
+                toggleBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        function activateTab(tabName) {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+
+            // Remove active class from all buttons and panels
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active');
+                btn.removeAttribute('aria-current');
+            });
+            tabPanels.forEach(panel => panel.classList.remove('active'));
+
+            // Find and activate the requested tab
+            const button = document.querySelector(`[data-tab="${tabName}"]`);
+            const panel = document.querySelector(`[data-panel="${tabName}"]`);
+
+            if (button && panel) {
+                button.classList.add('active');
+                button.setAttribute('aria-current', 'page');
+                panel.classList.add('active');
+                // Store in localStorage for persistence
+                localStorage.setItem(TAB_CONFIG.storageKey, tabName);
+                console.log('Tab activated:', tabName);
+                return true;
+            }
+            return false;
+        }
+
+        function initTabs() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+
+            console.log('Initializing tabs. Found', tabButtons.length, 'buttons and', tabPanels.length, 'panels');
+
+            let isUpdatingHash = false;
+
+            // Handle tab button clicks
+            tabButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const tabName = button.getAttribute('data-tab');
+                    // Update URL hash
+                    isUpdatingHash = true;
+                    window.location.hash = `#${tabName}`;
+                    isUpdatingHash = false;
+                });
+            });
+
+            // Handle hash changes (browser back/forward, direct links)
+            window.addEventListener('hashchange', () => {
+                // Don't process if we just set the hash ourselves
+                if (isUpdatingHash) return;
+
+                const hash = window.location.hash.slice(1);
+                const tabToActivate = hash || TAB_CONFIG.defaultTab;
+                
+                const success = activateTab(tabToActivate);
+                
+                // Only update hash if activation failed AND we're not already setting it
+                if (!success && tabToActivate !== TAB_CONFIG.defaultTab) {
+                    console.warn(`Tab "${tabToActivate}" not found, falling back to default`);
+                    isUpdatingHash = true;
+                    window.location.hash = `#${TAB_CONFIG.defaultTab}`;
+                    isUpdatingHash = false;
+                }
+            });
+
+            // Initialize on page load
+            const hash = window.location.hash.slice(1);
+            const initialTab = hash || localStorage.getItem(TAB_CONFIG.storageKey) || TAB_CONFIG.defaultTab;
+            activateTab(initialTab);
+        }
+
+        // Initialize tabs as soon as DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initTabs);
+        } else {
+            initTabs();
+        }
+    </script>
+
+</body>
+</html>

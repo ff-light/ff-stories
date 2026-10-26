@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Public story applications for the FF monorepo.">
+    <title>FF Stories</title>
+    <style>
+        :root {
+            color: #1d2924;
+            background: #edf2ee;
+            font-family: "Aptos", "Segoe UI", sans-serif;
+            font-synthesis: none;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            min-width: 320px;
+            min-height: 100vh;
+            margin: 0;
+            background-image: linear-gradient(rgba(29, 41, 36, 0.035) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(29, 41, 36, 0.035) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        main {
+            width: min(100%, 840px);
+            margin: 0 auto;
+            padding: 64px 28px 48px;
+        }
+
+        header {
+            border-top: 5px solid #236b58;
+            padding-top: 18px;
+        }
+
+        .eyebrow {
+            margin: 0 0 28px;
+            color: #236b58;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        h1 {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 48px;
+            font-weight: 500;
+            line-height: 1.05;
+        }
+
+        .intro {
+            margin: 14px 0 38px;
+            color: #53615b;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        nav { border-top: 1px solid #b9c7bf; }
+
+        nav a {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 19px 2px;
+            border-bottom: 1px solid #b9c7bf;
+            color: inherit;
+            text-decoration: none;
+        }
+
+        nav a:focus-visible {
+            outline: 3px solid #c74d2e;
+            outline-offset: 4px;
+        }
+
+        nav a:hover .story-name { color: #b33f24; }
+
+        .story-name {
+            display: block;
+            font-size: 21px;
+            font-weight: 650;
+        }
+
+        .story-description {
+            display: block;
+            margin-top: 5px;
+            color: #53615b;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .open-link {
+            flex: none;
+            color: #236b58;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        @media (max-width: 520px) {
+            main { padding: 42px 20px 32px; }
+            h1 { font-size: 40px; }
+            nav a { align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <p class="eyebrow">@ff / STORY INDEX</p>
+            <h1>FF Stories</h1>
+        </header>
+        <p class="intro">Browse the component library and hex-scene kit.</p>
+        <nav aria-label="Story applications">
+            <a href="/ff-stories/components/">
+                <span>
+                    <span class="story-name">Components</span>
+                    <span class="story-description">Interactive stories for the FF component library.</span>
+                </span>
+                <span class="open-link">Open</span>
+            </a>
+            <a href="/ff-stories/kit/">
+                <span>
+                    <span class="story-name">Kit</span>
+                    <span class="story-description">Hex-scene authoring and layer stories.</span>
+                </span>
+                <span class="open-link">Open</span>
+            </a>
+        </nav>
+    </main>
+</body>
+</html>
